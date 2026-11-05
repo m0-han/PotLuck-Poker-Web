@@ -26,7 +26,7 @@ const db = firebase.firestore();
 
 // --- STATE MANAGEMENT ---
 let currentUser = null;
-let userRole = 'VISITOR'; // Roles: 'SUPER_ADMIN', 'ADMIN', 'VISITOR'
+let userRole = 'VISITOR';
 
 let PRESET_PLAYERS = [
   "BabaVanga", "Shubham", "Vishal Sinha", "Kochhar", "Kshitij",
@@ -34,7 +34,7 @@ let PRESET_PLAYERS = [
   "Chinmay", "Aishwarya", "Ankur"
 ];
 
-// NAME DEDUPLICATION MAP: "Spelling Mistake / Variant": "Correct Standard Name"
+// NAME DEDUPLICATION MAP
 const PLAYER_ALIASES = {
   "Shubam": "Shubham",
   "Chinmayee": "Chinmay",
@@ -42,13 +42,10 @@ const PLAYER_ALIASES = {
   "Mohan": "BabaVanga",
   "Jisho": "Boaz",
   "Srinivas": "Sreenivas"
-  // Add any other spelling typos here as: "Typo Name": "Clean Name"
 };
 
-// Hidden player names list (Synced with Firebase)
 let hiddenPlayerNames = new Set();
 
-// Helper to sanitize player names across the entire app
 function normalizePlayerName(name) {
   if (!name) return '';
   const trimmed = name.trim();
@@ -64,49 +61,61 @@ let allUsersList = [];
 
 // --- FIREBASE REALTIME LISTENERS ---
 function initRealtimeListeners() {
-  // Listen for Active Game changes
   db.collection('poker_sessions').doc('active_session').onSnapshot(doc => {
-    if (doc.exists) {
-      activeGame = doc.data();
-      if (activeGame && activeGame.status === 'ACTIVE') {
-        document.getElementById('ledgerTabBtn').style.display = (userRole !== 'VISITOR') ? 'block' : 'none';
+    try {
+      if (doc.exists) {
+        activeGame = doc.data();
+        if (activeGame && activeGame.status === 'ACTIVE') {
+          document.getElementById('ledgerTabBtn').style.display = (userRole !== 'VISITOR') ? 'block' : 'none';
+        } else {
+          activeGame = null;
+          document.getElementById('ledgerTabBtn').style.display = 'none';
+        }
       } else {
         activeGame = null;
         document.getElementById('ledgerTabBtn').style.display = 'none';
       }
-    } else {
-      activeGame = null;
-      document.getElementById('ledgerTabBtn').style.display = 'none';
+      renderAll();
+    } catch (e) {
+      console.error("Active session sync error:", e);
     }
-    renderAll();
-  }); // <--- Fixed typo colon to closing bracket/semicolon
+  });
 
-  // Listen for Hidden Players Configuration
   db.collection('poker_config').doc('hidden_players').onSnapshot(doc => {
-    if (doc.exists && doc.data().names) {
-      hiddenPlayerNames = new Set(doc.data().names);
-    } else {
-      hiddenPlayerNames.clear();
+    try {
+      if (doc.exists && doc.data().names) {
+        hiddenPlayerNames = new Set(doc.data().names);
+      } else {
+        hiddenPlayerNames.clear();
+      }
+      renderAll();
+    } catch (e) {
+      console.error("Hidden players sync error:", e);
     }
-    renderAll();
   });
 
-  // Listen for History Games
   db.collection('poker_history').orderBy('id', 'desc').onSnapshot(snapshot => {
-    historyGames = [];
-    snapshot.forEach(doc => {
-      historyGames.push(doc.data());
-    });
-    renderAll();
+    try {
+      historyGames = [];
+      snapshot.forEach(doc => {
+        historyGames.push(doc.data());
+      });
+      renderAll();
+    } catch (e) {
+      console.error("History sync error:", e);
+    }
   });
 
-  // Listen for User Roles (Super Admin View)
   db.collection('users').onSnapshot(snapshot => {
-    allUsersList = [];
-    snapshot.forEach(doc => {
-      allUsersList.push({ uid: doc.id, ...doc.data() });
-    });
-    if (userRole === 'SUPER_ADMIN') renderUsersList();
+    try {
+      allUsersList = [];
+      snapshot.forEach(doc => {
+        allUsersList.push({ uid: doc.id, ...doc.data() });
+      });
+      if (userRole === 'SUPER_ADMIN') renderUsersList();
+    } catch (e) {
+      console.error("Users sync error:", e);
+    }
   });
 }
 
@@ -235,7 +244,6 @@ async function updateUserRole(uid, newRole) {
   }
 }
 
-/* TOGGLE PLAYER VISIBILITY (SUPER ADMIN ONLY) */
 async function togglePlayerVisibility(playerName) {
   if (userRole !== 'SUPER_ADMIN') return toast('Super Admin privileges required');
   
@@ -256,13 +264,13 @@ async function togglePlayerVisibility(playerName) {
   }
 }
 
-/* ENHANCED USER & PLAYER VISIBILITY CONTROL PANEL */
 function renderUsersList() {
   const container = document.getElementById('usersList');
+  if(!container) return;
   
   const allKnownPlayers = new Set();
   PRESET_PLAYERS.forEach(p => allKnownPlayers.add(normalizePlayerName(p)));
-  historyGames.forEach(g => g.players.forEach(p => allKnownPlayers.add(normalizePlayerName(p))));
+  (historyGames || []).forEach(g => (g.players || []).forEach(p => allKnownPlayers.add(normalizePlayerName(p))));
 
   let html = `
     <div class="card" style="margin-bottom:14px">
@@ -284,14 +292,14 @@ function renderUsersList() {
     <div class="card">
       <div class="eyebrow">REGISTERED ACCOUNTS</div>
       <h3>User Access Roles</h3>
-      ${allUsersList.map(u => `
+      ${(allUsersList || []).map(u => `
         <div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)">
           <div>
             <b>${u.email}</b>
             <div class="sub">UID: ${u.uid}</div>
           </div>
           <div>
-            <select style="width:auto;min-height:30px;font-size:11px" onchange="updateUserRole('${u.uid}', this.value)" ${u.uid === currentUser.uid ? 'disabled' : ''}>
+            <select style="width:auto;min-height:30px;font-size:11px" onchange="updateUserRole('${u.uid}', this.value)" ${currentUser && u.uid === currentUser.uid ? 'disabled' : ''}>
               <option value="VISITOR" ${u.role === 'VISITOR' ? 'selected' : ''}>VISITOR</option>
               <option value="ADMIN" ${u.role === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
               <option value="SUPER_ADMIN" ${u.role === 'SUPER_ADMIN' ? 'selected' : ''}>SUPER ADMIN</option>
@@ -326,7 +334,8 @@ function setTodayDate() {
   let yyyy = today.getFullYear();
   let mm = String(today.getMonth() + 1).padStart(2, '0');
   let dd = String(today.getDate()).padStart(2, '0');
-  document.getElementById('gameDate').value = `${yyyy}-${mm}-${dd}`;
+  let el = document.getElementById('gameDate');
+  if(el) el.value = `${yyyy}-${mm}-${dd}`;
 }
 setTodayDate();
 
@@ -339,6 +348,7 @@ function formatDateDDMMYYYY(dateStr) {
 
 function toast(m) {
   let t = document.getElementById('toast');
+  if(!t) return;
   t.textContent = m;
   t.classList.add('show');
   clearTimeout(t.x);
@@ -358,10 +368,11 @@ function switchTab(tabId, btn) {
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('primary'));
   
-  document.getElementById(tabId).classList.add('active');
-  btn.classList.add('primary');
+  let target = document.getElementById(tabId);
+  if(target) target.classList.add('active');
+  if(btn) btn.classList.add('primary');
 
-  btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  if(btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   renderAll();
 }
 
@@ -403,8 +414,11 @@ function calculateNetPL(p) {
 }
 
 function renderQuickView() {
+  let titleEl = document.getElementById('quickGameTitle');
+  if(!titleEl) return;
+
   if(!activeGame) {
-    document.getElementById('quickGameTitle').textContent = 'No Active Game';
+    titleEl.textContent = 'No Active Game';
     document.getElementById('quickGameMeta').textContent = 'Create a game session to start adding players';
     document.getElementById('endSettleBtn').disabled = true;
     document.getElementById('addPlayerBtn').disabled = true;
@@ -412,20 +426,21 @@ function renderQuickView() {
     return;
   }
 
-  document.getElementById('quickGameTitle').textContent = activeGame.title;
+  titleEl.textContent = activeGame.title;
   document.getElementById('quickGameMeta').textContent = `${activeGame.date} · Blinds ₹${activeGame.small}/₹${activeGame.big} · ₹${activeGame.cash} = ${activeGame.chips} chips`;
   document.getElementById('endSettleBtn').disabled = false;
   document.getElementById('addPlayerBtn').disabled = false;
 
   let container = document.getElementById('quickPlayerList');
-  if(activeGame.players.length === 0) {
+  let players = activeGame.players || [];
+  if(players.length === 0) {
     container.innerHTML = `<div class="card"><div class="muted">No players added yet. Click "+ Add Players" to bring players to the table.</div></div>`;
     return;
   }
 
   const isAdmin = (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN');
 
-  container.innerHTML = activeGame.players.map(p => {
+  container.innerHTML = players.map(p => {
     let displayName = normalizePlayerName(p.name);
     let pl = calculateNetPL(p);
     let plFormatted = (pl >= 0 ? '+' : '-') + '₹' + Math.abs(Math.round(pl)).toLocaleString('en-IN');
@@ -532,8 +547,8 @@ function renderPresetChips() {
   let freqMap = {};
   PRESET_PLAYERS.forEach(name => freqMap[name] = 0);
 
-  historyGames.forEach(g => {
-    g.players.forEach(p => {
+  (historyGames || []).forEach(g => {
+    (g.players || []).forEach(p => {
       if(p.active) {
         let clean = normalizePlayerName(p.name);
         if(freqMap[clean] !== undefined) freqMap[clean]++;
@@ -541,7 +556,7 @@ function renderPresetChips() {
     });
   });
 
-  let activeNames = new Set(activeGame ? activeGame.players.filter(p => p.active).map(p => normalizePlayerName(p.name)) : []);
+  let activeNames = new Set(activeGame ? (activeGame.players || []).filter(p => p.active).map(p => normalizePlayerName(p.name)) : []);
   let sortedPresets = [...PRESET_PLAYERS].sort((a,b) => freqMap[b] - freqMap[a]);
 
   let html = sortedPresets.map(name => {
@@ -619,7 +634,7 @@ function handleSettlementKeydown(event, currentIndex, containerClass) {
 
 function openSettleModal() {
   if (userRole === 'VISITOR') return;
-  if(!activeGame || activeGame.players.length === 0) return toast('No players to settle!');
+  if(!activeGame || !activeGame.players || activeGame.players.length === 0) return toast('No players to settle!');
   let activeList = activeGame.players.filter(p => p.active);
   
   let inputsHtml = activeList.map((p, idx) => `
@@ -657,7 +672,8 @@ function addChipsToInput(inputId, amount) {
 }
 
 function updateSettleAudit() {
-  let totalIssued = activeGame.players.filter(p => p.active).reduce((s, p) => s + p.chips, 0);
+  if(!activeGame) return;
+  let totalIssued = (activeGame.players || []).filter(p => p.active).reduce((s, p) => s + p.chips, 0);
   let totalCounted = 0;
   
   document.querySelectorAll('.settle-input').forEach(inp => {
@@ -701,7 +717,7 @@ function calculateMinimalSettlements(balances) {
 
 async function finalizeAndArchiveGame() {
   if (userRole === 'VISITOR') return;
-  let activeList = activeGame.players.filter(p => p.active);
+  let activeList = (activeGame.players || []).filter(p => p.active);
   let balances = [];
 
   document.querySelectorAll('.settle-input').forEach(inp => {
@@ -735,10 +751,10 @@ async function finalizeAndArchiveGame() {
 function openEditModal(gid) {
   if (userRole === 'VISITOR') return;
   editingGameId = gid;
-  let g = historyGames.find(x => x.id === gid);
+  let g = (historyGames || []).find(x => x.id === gid);
   if(!g) return;
 
-  let inputsHtml = g.players.filter(p => p.active).map((p, idx) => `
+  let inputsHtml = (g.players || []).filter(p => p.active).map((p, idx) => `
     <div class="settle-card-wrap">
       <div class="settle-row">
         <div><b>${normalizePlayerName(p.name)}</b> <span class="sub">(Paid ₹${p.cash})</span></div>
@@ -765,14 +781,14 @@ function openEditModal(gid) {
 
 async function saveEditedGame() {
   if (userRole === 'VISITOR') return;
-  let g = historyGames.find(x => x.id === editingGameId);
+  let g = (historyGames || []).find(x => x.id === editingGameId);
   if(!g) return;
 
   let balances = [];
   document.querySelectorAll('.edit-input').forEach(inp => {
     let pid = inp.dataset.id;
     let finalChips = Math.max(0, +inp.value || 0);
-    let player = g.players.find(x => String(x.id) === String(pid));
+    let player = (g.players || []).find(x => String(x.id) === String(pid));
     if(player) {
       player.finalChips = finalChips;
       let finalCash = (finalChips / g.chips) * g.cash;
@@ -793,7 +809,7 @@ async function saveEditedGame() {
 
 async function deleteHistoryGame(gid) {
   if (userRole === 'VISITOR') return;
-  let g = historyGames.find(x => x.id === gid);
+  let g = (historyGames || []).find(x => x.id === gid);
   if(!g) return;
   
   if(confirm(`Are you sure you want to delete "${g.title}" (${g.date})? This action cannot be undone.`)) {
@@ -809,16 +825,18 @@ function generateShareText(g) {
   text += `📅 ${g.date} | Blinds ₹${g.small}/₹${g.big}\n\n`;
 
   text += `*Settlements / Transfers:*\n`;
-  if(g.settlements && g.settlements.length > 0) {
-    g.settlements.forEach(s => {
-      text += `• *${normalizePlayerName(s.from)}* pays *${normalizePlayerName(s.to)}* → ₹${s.amount.toLocaleString('en-IN')}\n`;
+  let settlements = g.settlements || [];
+  if(settlements.length > 0) {
+    settlements.forEach(s => {
+      text += `• *${normalizePlayerName(s.from)}* pays *${normalizePlayerName(s.to)}* → ₹${(s.amount || 0).toLocaleString('en-IN')}\n`;
     });
   } else {
     text += `• No payment transfers required.\n`;
   }
 
   text += `\n*Individual Results:*\n`;
-  g.players.filter(p => p.active).forEach(p => {
+  let players = g.players || [];
+  players.filter(p => p.active).forEach(p => {
     let finalChips = p.finalChips || 0;
     let chipVal = Math.round((finalChips / g.chips) * g.cash);
     let pl = p.finalPL || 0;
@@ -833,7 +851,7 @@ function generateShareText(g) {
 }
 
 function copyGameSummaryText(gid) {
-  let g = historyGames.find(x => x.id === gid);
+  let g = (historyGames || []).find(x => x.id === gid);
   if(!g) return;
   let text = generateShareText(g);
   navigator.clipboard.writeText(text).then(() => {
@@ -845,6 +863,7 @@ function copyGameSummaryText(gid) {
 
 function addSidePotInput() {
   let container = document.getElementById('sidePotInputs');
+  if(!container) return;
   let count = container.querySelectorAll('input').length + 1;
   let div = document.createElement('div');
   div.className = 'two';
@@ -916,8 +935,8 @@ function runChipConvert(source) {
 function renderLeaderboard() {
   leaderboardData = {};
 
-  historyGames.forEach(g => {
-    g.players.forEach(p => {
+  (historyGames || []).forEach(g => {
+    (g.players || []).forEach(p => {
       if (!p.active) return;
       const cleanName = normalizePlayerName(p.name);
       
@@ -948,6 +967,7 @@ function renderLeaderboard() {
 
   let sorted = Object.values(leaderboardData).sort((a,b) => b.totalPL - a.totalPL);
   let container = document.getElementById('leaderboardList');
+  if(!container) return;
 
   if (sorted.length === 0) {
     container.innerHTML = `<div class="card"><div class="muted">No completed games yet.</div></div>`;
@@ -990,7 +1010,7 @@ function renderLeaderboard() {
 }
 
 function renderOverallStats() {
-  let pokerDays = historyGames.length;
+  let pokerDays = (historyGames || []).length;
   let uniquePlayers = new Set();
   let totalBuyins = 0;
   let totalBuyinVal = 0;
@@ -1004,9 +1024,9 @@ function renderOverallStats() {
   let biggestPot = { amount: 0, game: '-' };
   let playerDaysMap = {};
 
-  historyGames.forEach(g => {
+  (historyGames || []).forEach(g => {
     let gamePot = 0;
-    g.players.forEach(p => {
+    (g.players || []).forEach(p => {
       if(!p.active) return;
       let cleanName = normalizePlayerName(p.name);
       uniquePlayers.add(cleanName);
@@ -1014,7 +1034,7 @@ function renderOverallStats() {
       let cashSpent = p.cash;
       totalBuyinVal += cashSpent;
       gamePot += cashSpent;
-      totalChipsIssued += (p.buyins * g.chips);
+      totalChipsIssued += (p.buyins * (g.chips || 4000));
 
       playerDaysMap[cleanName] = (playerDaysMap[cleanName] || 0) + 1;
 
@@ -1036,31 +1056,43 @@ function renderOverallStats() {
     }
   });
 
-  document.getElementById('statPokerDays').textContent = pokerDays;
-  document.getElementById('statUniquePlayers').textContent = uniquePlayers.size;
-  document.getElementById('statTotalBuyins').textContent = totalBuyins;
-  document.getElementById('statValueBuyins').textContent = '₹' + totalBuyinVal.toLocaleString('en-IN');
-  document.getElementById('statTotalProfit').textContent = '₹' + totalProfit.toLocaleString('en-IN');
-  document.getElementById('statTotalLoss').textContent = '₹' + totalLoss.toLocaleString('en-IN');
-  document.getElementById('statBreakEvenVal').textContent = '₹' + breakEvenVal.toLocaleString('en-IN');
-  document.getElementById('statChipsIssued').textContent = totalChipsIssued.toLocaleString('en-IN');
+  let pDaysEl = document.getElementById('statPokerDays');
+  if(pDaysEl) pDaysEl.textContent = pokerDays;
+  let uPlayersEl = document.getElementById('statUniquePlayers');
+  if(uPlayersEl) uPlayersEl.textContent = uniquePlayers.size;
+  let tBuyinsEl = document.getElementById('statTotalBuyins');
+  if(tBuyinsEl) tBuyinsEl.textContent = totalBuyins;
+  let vBuyinsEl = document.getElementById('statValueBuyins');
+  if(vBuyinsEl) vBuyinsEl.textContent = '₹' + totalBuyinVal.toLocaleString('en-IN');
+  let tProfitEl = document.getElementById('statTotalProfit');
+  if(tProfitEl) tProfitEl.textContent = '₹' + totalProfit.toLocaleString('en-IN');
+  let tLossEl = document.getElementById('statTotalLoss');
+  if(tLossEl) tLossEl.textContent = '₹' + totalLoss.toLocaleString('en-IN');
+  let bEvenEl = document.getElementById('statBreakEvenVal');
+  if(bEvenEl) bEvenEl.textContent = '₹' + breakEvenVal.toLocaleString('en-IN');
+  let cIssuedEl = document.getElementById('statChipsIssued');
+  if(cIssuedEl) cIssuedEl.textContent = totalChipsIssued.toLocaleString('en-IN');
 
   let mostActive = Object.entries(playerDaysMap).sort((a,b) => b[1] - a[1])[0] || ['-', 0];
   let avgBuyinsPerPlayer = (totalBuyins / (pokerDays || 1)).toFixed(1);
 
-  document.getElementById('funStatsList').innerHTML = `
-    <div class="stat-row"><div>Biggest Single-Game Win</div><b class="pos">+₹${maxWin.amount.toLocaleString('en-IN')} (${maxWin.player})</b></div>
-    <div class="stat-row"><div>Biggest Single-Game Loss</div><b class="neg">-₹${maxLoss.amount.toLocaleString('en-IN')} (${maxLoss.player})</b></div>
-    <div class="stat-row"><div>Largest Game Cash Pot</div><b>₹${biggestPot.amount.toLocaleString('en-IN')} (${biggestPot.game})</b></div>
-    <div class="stat-row"><div>Most Loyal Player</div><b>${mostActive[0]} (${mostActive[1]} days)</b></div>
-    <div class="stat-row"><div>Avg Buy-ins per Session</div><b>${avgBuyinsPerPlayer} buy-ins</b></div>
-  `;
+  let funList = document.getElementById('funStatsList');
+  if(funList) {
+    funList.innerHTML = `
+      <div class="stat-row"><div>Biggest Single-Game Win</div><b class="pos">+₹${maxWin.amount.toLocaleString('en-IN')} (${maxWin.player})</b></div>
+      <div class="stat-row"><div>Biggest Single-Game Loss</div><b class="neg">-₹${maxLoss.amount.toLocaleString('en-IN')} (${maxLoss.player})</b></div>
+      <div class="stat-row"><div>Largest Game Cash Pot</div><b>₹${biggestPot.amount.toLocaleString('en-IN')} (${biggestPot.game})</b></div>
+      <div class="stat-row"><div>Most Loyal Player</div><b>${mostActive[0]} (${mostActive[1]} days)</b></div>
+      <div class="stat-row"><div>Avg Buy-ins per Session</div><b>${avgBuyinsPerPlayer} buy-ins</b></div>
+    `;
+  }
 }
 
 function renderHistory() {
   let container = document.getElementById('historyList');
+  if(!container) return;
 
-  if(historyGames.length === 0) {
+  if(!historyGames || historyGames.length === 0) {
     container.innerHTML = `<div class="card"><div class="muted">No completed games in history yet.</div></div>`;
     return;
   }
@@ -1068,16 +1100,17 @@ function renderHistory() {
   const isAdmin = (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN');
 
   container.innerHTML = historyGames.map(g => {
-    let cashTotal = g.players.reduce((s,p) => s + p.cash, 0);
-    let chipTotal = g.players.reduce((s,p) => s + (p.buyins * g.chips), 0);
-    let activeCount = g.players.filter(p => p.active).length;
+    let players = g.players || [];
+    let cashTotal = players.reduce((s,p) => s + (p.cash || 0), 0);
+    let chipTotal = players.reduce((s,p) => s + ((p.buyins || 1) * (g.chips || 4000)), 0);
+    let activeCount = players.filter(p => p.active).length;
 
     return `
       <div class="card history-item">
         <div class="row">
           <div>
-            <b style="font-size:14px">${g.title}</b>
-            <div class="sub">${g.date} · ${activeCount} Players</div>
+            <b style="font-size:14px">${g.title || 'Game'}</b>
+            <div class="sub">${g.date || ''} · ${activeCount} Players</div>
           </div>
           <div style="display:flex;gap:4px">
             <button class="primary btn-sm" onclick="openHistoryDetail(${g.id})">Summary</button>
@@ -1102,6 +1135,7 @@ function renderHistory() {
 function toggleLogVisibility() {
   let logSec = document.getElementById('histLogContainer');
   let btn = document.getElementById('histLogToggleBtn');
+  if(!logSec || !btn) return;
   if(logSec.style.display === 'none') {
     logSec.style.display = 'block';
     btn.textContent = 'Hide Game Action Log ▲';
@@ -1112,15 +1146,18 @@ function toggleLogVisibility() {
 }
 
 function openHistoryDetail(gid) {
-  let g = historyGames.find(x => x.id === gid);
+  let g = (historyGames || []).find(x => x.id === gid);
   if(!g) return;
 
   const isAdmin = (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN');
 
-  document.getElementById('histModalTitle').textContent = g.title;
-  document.getElementById('histModalMeta').textContent = `${g.date} · Blinds ₹${g.small}/₹${g.big} · Buy-in ₹${g.cash}`;
+  let titleEl = document.getElementById('histModalTitle');
+  if(titleEl) titleEl.textContent = g.title || 'Game Details';
+  let metaEl = document.getElementById('histModalMeta');
+  if(metaEl) metaEl.textContent = `${g.date || ''} · Blinds ₹${g.small || 50}/₹${g.big || 100} · Buy-in ₹${g.cash || 1000}`;
 
-  let playersHtml = g.players.map(p => {
+  let players = g.players || [];
+  let playersHtml = players.map(p => {
     let displayName = normalizePlayerName(p.name);
     let pl = p.finalPL || 0;
     let plFormatted = (pl >= 0 ? '+' : '-') + '₹' + Math.abs(pl).toLocaleString('en-IN');
@@ -1131,7 +1168,7 @@ function openHistoryDetail(gid) {
         <div class="row">
           <div>
             <b>${displayName}</b>
-            <div class="sub">Buy-ins: ${p.buyins} · Final Chips: ${p.finalChips || 0}</div>
+            <div class="sub">Buy-ins: ${p.buyins || 1} · Final Chips: ${p.finalChips || 0}</div>
           </div>
           <b class="${plClass}">${plFormatted}</b>
         </div>
@@ -1139,7 +1176,8 @@ function openHistoryDetail(gid) {
     `;
   }).join('');
 
-  let settlementsHtml = g.settlements && g.settlements.length > 0 ? `
+  let settlements = g.settlements || [];
+  let settlementsHtml = settlements.length > 0 ? `
     <div class="row" style="margin-top:10px">
       <h3>Final Minimal Settlements</h3>
       <div style="display:flex;gap:4px">
@@ -1147,65 +1185,80 @@ function openHistoryDetail(gid) {
         ${isAdmin ? `<button class="btn-delete" onclick="deleteHistoryGame(${g.id})">🗑️ Delete Session</button>` : ''}
       </div>
     </div>
-    ${g.settlements.map(s => `
+    ${settlements.map(s => `
       <div class="settle-card">
         <div class="row">
           <div><b>${normalizePlayerName(s.from)}</b> pays <b>${normalizePlayerName(s.to)}</b></div>
-          <b class="count">₹${s.amount.toLocaleString('en-IN')}</b>
+          <b class="count">₹${(s.amount || 0).toLocaleString('en-IN')}</b>
         </div>
       </div>
     `).join('')}
   ` : '<div class="notice">No settlement transfers required.</div>';
 
-  let logsHtml = g.logs && g.logs.length > 0 ? `
+  let logs = g.logs || [];
+  let logsHtml = logs.length > 0 ? `
     <div style="margin-top:10px">
       <button id="histLogToggleBtn" style="width:100%" onclick="toggleLogVisibility()">Expand Game Action Log ▼</button>
       <div id="histLogContainer" style="display:none;margin-top:8px">
-        ${g.logs.slice().reverse().map(l => `
+        ${logs.slice().reverse().map(l => `
           <div class="tx">
-            <div><b>${l.action}</b><div class="sub">${l.details}</div></div>
-            <div class="sub">${l.time}</div>
+            <div><b>${l.action || ''}</b><div class="sub">${l.details || ''}</div></div>
+            <div class="sub">${l.time || ''}</div>
           </div>
         `).join('')}
       </div>
     </div>
   ` : '';
 
-  document.getElementById('histModalContent').innerHTML = playersHtml + settlementsHtml + logsHtml;
-  document.getElementById('historyModal').classList.add('show');
+  let contentEl = document.getElementById('histModalContent');
+  if(contentEl) contentEl.innerHTML = playersHtml + settlementsHtml + logsHtml;
+  let modalEl = document.getElementById('historyModal');
+  if(modalEl) modalEl.classList.add('show');
 }
 
 function renderLedger() {
+  let cashInEl = document.getElementById('cashIn');
+  if(!cashInEl) return;
+
   if(!activeGame) {
-    document.getElementById('cashIn').textContent = '₹0';
+    cashInEl.textContent = '₹0';
     document.getElementById('chipsIn').textContent = '0';
     document.getElementById('activePlayerCount').textContent = '0';
     document.getElementById('ledgerList').innerHTML = `<div class="muted">No active game session.</div>`;
     return;
   }
 
-  let cashTotal = activeGame.players.reduce((s,p) => s + p.cash, 0);
-  let chipTotal = activeGame.players.reduce((s,p) => s + p.chips, 0);
-  let activeCount = activeGame.players.filter(p => p.active).length;
+  let players = activeGame.players || [];
+  let cashTotal = players.reduce((s,p) => s + (p.cash || 0), 0);
+  let chipTotal = players.reduce((s,p) => s + (p.chips || 0), 0);
+  let activeCount = players.filter(p => p.active).length;
 
-  document.getElementById('cashIn').textContent = '₹' + cashTotal.toLocaleString('en-IN');
+  cashInEl.textContent = '₹' + cashTotal.toLocaleString('en-IN');
   document.getElementById('chipsIn').textContent = chipTotal.toLocaleString('en-IN');
   document.getElementById('activePlayerCount').textContent = activeCount;
 
-  document.getElementById('ledgerList').innerHTML = activeGame.logs.slice().reverse().map(l => `
-    <div class="tx">
-      <div><b>${l.action}</b><div class="sub">${l.details}</div></div>
-      <div class="sub">${l.time}</div>
-    </div>
-  `).join('');
+  let logs = activeGame.logs || [];
+  let ledgerListEl = document.getElementById('ledgerList');
+  if(ledgerListEl) {
+    ledgerListEl.innerHTML = logs.slice().reverse().map(l => `
+      <div class="tx">
+        <div><b>${l.action || ''}</b><div class="sub">${l.details || ''}</div></div>
+        <div class="sub">${l.time || ''}</div>
+      </div>
+    `).join('');
+  }
 }
 
 function renderAll() {
-  renderQuickView();
-  renderLedger();
-  renderLeaderboard();
-  renderOverallStats();
-  renderHistory();
+  try {
+    renderQuickView();
+    renderLedger();
+    renderLeaderboard();
+    renderOverallStats();
+    renderHistory();
+  } catch (err) {
+    console.error("Render error caught:", err);
+  }
 }
 
 renderAll();
