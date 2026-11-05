@@ -473,10 +473,31 @@ let currentUser = null;
 let userRole = 'VISITOR'; // Roles: 'SUPER_ADMIN', 'ADMIN', 'VISITOR'
 
 let PRESET_PLAYERS = [
-  "Mohan", "Shubam", "Vishal Sinha", "Kochhar", "Kshitij", 
-  "Jisho", "Sheki", "Abhilash", "Sreenivas", "Guruji", 
+  "BabaVanga", "Shubham", "Vishal Sinha", "Kochhar", "Kshitij",
+  "Boaz", "Sheki", "Abhilash", "Sreenivas", "Guruji", 
   "Chinmay", "Aishwarya", "Ankur"
 ];
+
+// NAME DEDUPLICATION MAP: "Spelling Mistake / Variant": "Correct Standard Name"
+const PLAYER_ALIASES = {
+  "Shubam": "Shubham",
+  "Chinmayee": "Chinmay",
+  "MK": "BabaVanga",
+  "Mohan": "BabaVanga",
+  "Jisho": "Boaz",
+  "Srinivas": "Sreenivas"
+  // Add any other spelling typos here as: "Typo Name": "Clean Name"
+};
+
+// Hidden player names list (Synced with Firebase)
+let hiddenPlayerNames = new Set();
+
+// Helper to sanitize player names across the entire app
+function normalizePlayerName(name) {
+  if (!name) return '';
+  const trimmed = name.trim();
+  return PLAYER_ALIASES[trimmed] || trimmed;
+}
 
 let activeGame = null;
 let historyGames = [];
@@ -502,7 +523,16 @@ function initRealtimeListeners() {
       document.getElementById('ledgerTabBtn').style.display = 'none';
     }
     renderAll();
-  });
+  }):
+    // Listen for Hidden Players Configuration
+db.collection('poker_config').doc('hidden_players').onSnapshot(doc => {
+  if (doc.exists && doc.data().names) {
+    hiddenPlayerNames = new Set(doc.data().names);
+  } else {
+    hiddenPlayerNames.clear();
+  }
+  renderAll();
+});
 
   // Listen for History Games
   db.collection('poker_history').orderBy('id', 'desc').onSnapshot(snapshot => {
@@ -647,31 +677,77 @@ async function updateUserRole(uid, newRole) {
   }
 }
 
-function renderUsersList() {
-  const container = document.getElementById('usersList');
-  if (allUsersList.length === 0) {
-    container.innerHTML = `<div class="card"><div class="muted">No registered users found.</div></div>`;
-    return;
+/* TOGGLE PLAYER VISIBILITY (SUPER ADMIN ONLY) */
+async function togglePlayerVisibility(playerName) {
+  if (userRole !== 'SUPER_ADMIN') return toast('Super Admin privileges required');
+  
+  const cleanName = normalizePlayerName(playerName);
+  if (hiddenPlayerNames.has(cleanName)) {
+    hiddenPlayerNames.delete(cleanName);
+  } else {
+    hiddenPlayerNames.add(cleanName);
   }
 
-  container.innerHTML = allUsersList.map(u => `
-    <div class="card">
-      <div class="row">
-        <div>
-          <b>${u.email}</b>
-          <div class="sub">UID: ${u.uid}</div>
-        </div>
-        <div>
-          <select style="width:auto;min-height:30px;font-size:11px" onchange="updateUserRole('${u.uid}', this.value)" ${u.uid === currentUser.uid ? 'disabled' : ''}>
-            <option value="VISITOR" ${u.role === 'VISITOR' ? 'selected' : ''}>VISITOR</option>
-            <option value="ADMIN" ${u.role === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
-            <option value="SUPER_ADMIN" ${u.role === 'SUPER_ADMIN' ? 'selected' : ''}>SUPER ADMIN</option>
-          </select>
-        </div>
+  try {
+    await db.collection('poker_config').doc('hidden_players').set({
+      names: Array.from(hiddenPlayerNames)
+    });
+    toast(`${cleanName} is now ${hiddenPlayerNames.has(cleanName) ? 'Hidden 🙈' : 'Visible 👁️'}`);
+  } catch (err) {
+    toast('Error updating visibility: ' + err.message);
+  }
+}
+
+/* ENHANCED USER & PLAYER VISIBILITY CONTROL PANEL */
+function renderUsersList() {
+  const container = document.getElementById('usersList');
+  
+  // Build unique clean player list from history
+  const allKnownPlayers = new Set();
+  PRESET_PLAYERS.forEach(p => allKnownPlayers.add(normalizePlayerName(p)));
+  historyGames.forEach(g => g.players.forEach(p => allKnownPlayers.add(normalizePlayerName(p))));
+
+  let html = `
+    <div class="card" style="margin-bottom:14px">
+      <div class="eyebrow">LEADERBOARD VISIBILITY CONTROL</div>
+      <h3>Hide / Unhide Player Names</h3>
+      <div class="sub" style="margin-bottom:10px">Hidden players are omitted from public leaderboards & statistics without deleting historical records.</div>
+      <div class="preset-chips">
+        ${Array.from(allKnownPlayers).sort().map(name => {
+          const isHidden = hiddenPlayerNames.has(name);
+          return `
+            <button class="chip-btn ${isHidden ? '' : 'selected'}" onclick="togglePlayerVisibility('${name}')">
+              ${isHidden ? '🙈 Hidden: ' : '👁️ Visible: '}${name}
+            </button>
+          `;
+        }).join('')}
       </div>
     </div>
-  `).join('');
+
+    <div class="card">
+      <div class="eyebrow">REGISTERED ACCOUNTS</div>
+      <h3>User Access Roles</h3>
+      ${allUsersList.map(u => `
+        <div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)">
+          <div>
+            <b>${u.email}</b>
+            <div class="sub">UID: ${u.uid}</div>
+          </div>
+          <div>
+            <select style="width:auto;min-height:30px;font-size:11px" onchange="updateUserRole('${u.uid}', this.value)" ${u.uid === currentUser.uid ? 'disabled' : ''}>
+              <option value="VISITOR" ${u.role === 'VISITOR' ? 'selected' : ''}>VISITOR</option>
+              <option value="ADMIN" ${u.role === 'ADMIN' ? 'selected' : ''}>ADMIN</option>
+              <option value="SUPER_ADMIN" ${u.role === 'SUPER_ADMIN' ? 'selected' : ''}>SUPER ADMIN</option>
+            </select>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  container.innerHTML = html;
 }
+
 
 // --- SYNC HELPERS ---
 async function syncActiveGame() {
@@ -1195,7 +1271,7 @@ function generateShareText(g) {
     let sign = pl >= 0 ? '+' : '-';
     let buyinText = `${p.buyins} ${p.buyins === 1 ? 'Buy-in' : 'Buy-ins'}`;
     
-    text += `• ${p.name}: ${buyinText} (₹${p.cash.toLocaleString('en-IN')}) | Chips Returned: ${finalChips.toLocaleString('en-IN')} (₹${chipVal.toLocaleString('en-IN')}) | P/L: ${sign}₹${Math.abs(pl).toLocaleString('en-IN')}\n`;
+    text += `• ${normalizePlayerName(p.name)}: ${buyinText} (₹${p.cash.toLocaleString('en-IN')}) | Chips Returned: ${finalChips.toLocaleString('en-IN')} (₹${chipVal.toLocaleString('en-IN')}) | P/L: ${sign}₹${Math.abs(pl).toLocaleString('en-IN')}\n`;
   });
 
   text += `\n_Recorded on Potluck Poker_ 🚀`;
@@ -1285,31 +1361,48 @@ function runChipConvert(source) {
   }
 }
 
-/* LEADERBOARD WITH RANK BADGES */
+/* LEADERBOARD WITH DEDUPLICATION & VISIBILITY FILTER */
 function renderLeaderboard() {
   leaderboardData = {};
 
   historyGames.forEach(g => {
     g.players.forEach(p => {
-      if(!p.active) return;
-      if(!leaderboardData[p.name]) {
-        leaderboardData[p.name] = { name: p.name, days: 0, profitDays: 0, lossDays: 0, breakEvenDays: 0, totalPL: 0 };
-      }
-      leaderboardData[p.name].days++;
-      let pl = p.finalPL || 0;
-      leaderboardData[p.name].totalPL += pl;
+      if (!p.active) return;
       
-      if(pl > 0) leaderboardData[p.name].profitDays++;
-      else if(pl < 0) leaderboardData[p.name].lossDays++;
-      else leaderboardData[p.name].breakEvenDays++;
+      // 1. Normalize spelling typos
+      const cleanName = normalizePlayerName(p.name);
+      
+      // 2. Hide players if marked hidden (unless logged in as Super Admin)
+      if (hiddenPlayerNames.has(cleanName) && userRole !== 'SUPER_ADMIN') {
+        return;
+      }
+
+      if (!leaderboardData[cleanName]) {
+        leaderboardData[cleanName] = { 
+          name: cleanName, 
+          days: 0, 
+          profitDays: 0, 
+          lossDays: 0, 
+          breakEvenDays: 0, 
+          totalPL: 0 
+        };
+      }
+      
+      leaderboardData[cleanName].days++;
+      let pl = p.finalPL || 0;
+      leaderboardData[cleanName].totalPL += pl;
+      
+      if (pl > 0) leaderboardData[cleanName].profitDays++;
+      else if (pl < 0) leaderboardData[cleanName].lossDays++;
+      else leaderboardData[cleanName].breakEvenDays++;
     });
   });
 
   let sorted = Object.values(leaderboardData).sort((a,b) => b.totalPL - a.totalPL);
   let container = document.getElementById('leaderboardList');
 
-  if(sorted.length === 0) {
-    container.innerHTML = `<div class="card"><div class="muted">No completed games yet. Complete a game session to view leaderboard rankings.</div></div>`;
+  if (sorted.length === 0) {
+    container.innerHTML = `<div class="card"><div class="muted">No completed games yet.</div></div>`;
     return;
   }
 
@@ -1319,13 +1412,16 @@ function renderLeaderboard() {
 
     let rankBadgeClass = idx === 0 ? 'rank-1' : (idx === 1 ? 'rank-2' : (idx === 2 ? 'rank-3' : ''));
     let rankLabel = idx === 0 ? '🥇 1st' : (idx === 1 ? '🥈 2nd' : (idx === 2 ? '🥉 3rd' : `#${idx + 1}`));
+    let isHidden = hiddenPlayerNames.has(s.name);
 
     return `
-      <div class="card" style="padding:10px 12px">
+      <div class="card" style="padding:10px 12px; ${isHidden ? 'opacity:0.6;border-style:dashed;' : ''}">
         <div class="lb-single-row">
           <div style="display:flex;align-items:center;gap:8px;min-width:100px;max-width:170px">
             <div class="lb-rank ${rankBadgeClass}">${rankLabel}</div>
-            <b style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</b>
+            <b style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${s.name} ${isHidden ? '<span class="tag tag-out">HIDDEN</span>' : ''}
+            </b>
           </div>
 
           <div class="lb-metrics-inline">
@@ -1364,7 +1460,7 @@ function renderOverallStats() {
     let gamePot = 0;
     g.players.forEach(p => {
       if(!p.active) return;
-      uniquePlayers.add(p.name);
+      uniquePlayers.add(normalizePlayerName(p.name));
       totalBuyins += p.buyins;
       let cashSpent = p.cash;
       totalBuyinVal += cashSpent;
