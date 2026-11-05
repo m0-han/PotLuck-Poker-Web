@@ -9,452 +9,8 @@
 <meta name="theme-color" content="#0d100c">
 
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration Failed:', err));
-    });
-  }
-</script>
-
-  
-<style>
-:root{--bg:#0d100c;--card:#171b15;--card2:#20261d;--line:#30382d;--text:#f4f1e7;--muted:#a8ad9f;--lime:#d9ff4f;--green:#7ff0a3;--red:#ff817a;--orange:#ffb36b;--gold:#ffd700;--silver:#c0c0c0;--bronze:#cd7f32}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}
-.app{max-width:800px;margin:auto;padding:12px 12px 80px}
-.top,.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.logo{font-weight:900;font-size:22px}
-.logo b{color:var(--lime)}
-.pill{border:1px solid var(--line);padding:4px 8px;border-radius:999px;color:var(--muted);font-size:10px}
-
-/* Auth Bar Styles */
-.auth-bar{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:10px 0 6px}
-.user-badge{display:flex;align-items:center;gap:8px;font-size:12px}
-.role-pill{font-size:9px;font-weight:800;text-transform:uppercase;padding:2px 6px;border-radius:999px;border:1px solid var(--line)}
-.role-superadmin{border-color:var(--gold);color:var(--gold);background:#312900}
-.role-admin{border-color:var(--lime);color:var(--lime);background:#1a2e15}
-.role-visitor{border-color:var(--muted);color:var(--muted);background:#171b15}
-
-/* Scrollable tabs */
-.tabs{display:flex;gap:6px;overflow-x:auto;margin:10px 0;scroll-behavior:smooth;padding-bottom:2px}
-.tabs::-webkit-scrollbar{display:none}
-.tabs button{white-space:nowrap;flex:0 0 auto}
-
-button{border:1px solid var(--line);background:#20251d;color:var(--text);padding:8px 12px;border-radius:11px;font-weight:700;min-height:38px;cursor:pointer;font-size:13px}
-button.primary{background:var(--lime);color:#10130c;border-color:var(--lime)}
-button.danger{background:#321a19;border-color:#63302e;color:#ffaaa5}
-button.accent{background:#1a2e22;border-color:#2a523a;color:var(--green)}
-button.warning{background:#382710;border-color:#61441c;color:var(--orange)}
-button.btn-sm{padding:4px 8px;min-height:28px;font-size:11px;border-radius:8px}
-
-button.btn-edit{padding:4px 8px;min-height:28px;font-size:11px;border-radius:8px;background:#252d21;border-color:#3a4734;color:var(--text);display:inline-flex;align-items:center;gap:3px}
-button.btn-copy{padding:4px 8px;min-height:28px;font-size:11px;border-radius:8px;background:#1e293b;border-color:#334155;color:#93c5fd;display:inline-flex;align-items:center;gap:3px}
-button.btn-delete{padding:4px 8px;min-height:28px;font-size:11px;border-radius:8px;background:#321a19;border-color:#63302e;color:#ffaaa5;display:inline-flex;align-items:center;gap:3px}
-button:disabled{opacity:.45}
-
-section{display:none}
-section.active{display:block}
-.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px;margin-bottom:10px}
-.card.removed-row{opacity:0.45;filter:grayscale(0.5);pointer-events:none}
-.card.removed-row .restore-btn{pointer-events:auto;opacity:1}
-.card.sitting-out{opacity:0.65;border-style:dashed;border-color:var(--orange)}
-.eyebrow{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--lime);font-weight:800}
-
-/* Header Typography */
-h2{font-size:15px;font-weight:800;margin:3px 0 4px;letter-spacing:-0.3px}
-h3{font-size:13px;font-weight:700;margin:3px 0 4px}
-.game-heading{font-size:16px;font-weight:800;margin:2px 0 4px}
-.muted,.sub{color:var(--muted);font-size:11px;line-height:1.3}
-
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
-.stats-4{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:8px}
-@media(min-width:600px){.stats-4{grid-template-columns:repeat(4,1fr)}}
-.stat{background:#11150f;border:1px solid var(--line);border-radius:10px;padding:8px}
-.stat small{display:block;color:var(--muted);font-size:9px}
-.stat strong{display:block;margin-top:2px;font-size:14px}
-.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.label{display:block;color:var(--muted);font-size:10px;margin:8px 0 3px}
-input,select,textarea{width:100%;min-height:38px;border-radius:10px;border:1px solid var(--line);background:#0f120e;color:var(--text);padding:8px 10px;font-size:13px}
-input[type="number"], input[type="text"], input[type="date"], input[type="email"], input[type="password"]{min-height:38px;padding:8px 10px}
-input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
-textarea{min-height:60px;resize:vertical}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.who{display:flex;align-items:center;gap:8px}
-.avatar{width:32px;height:32px;border-radius:999px;background:#30382d;display:grid;place-items:center;font-weight:800;font-size:10px}
-.count{color:var(--lime);font-weight:800}
-.pos{color:var(--green)}
-.neg{color:var(--red)}
-.tx{display:flex;justify-content:space-between;gap:6px;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px}
-.tx:last-child{border-bottom:0}
-.tag{font-size:9px;padding:3px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
-.tag-out{border-color:var(--orange);color:var(--orange)}
-
-.modal{position:fixed;inset:0;background:#0009;display:none;align-items:flex-start;justify-content:center;padding:12px;z-index:4;overflow-y:auto}
-.modal.show{display:flex}
-.sheet{width:min(800px,100%);background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;max-height:90vh;overflow-y:auto;margin-top:10px}
-.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#f3f0e6;color:#12150e;border-radius:999px;padding:8px 14px;font-size:11px;font-weight:800;display:none;z-index:8}
-.toast.show{display:block}
-
-/* SETTLEMENT & CHIP QUICK BUTTONS */
-.settle-card-wrap{background:#11150f;border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}
-.settle-row{display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center}
-.quick-chip-btns{display:flex;gap:4px;margin-top:6px;justify-content:flex-end}
-.quick-chip-btns button{padding:2px 6px;min-height:24px;font-size:10px;border-radius:6px;background:#1d241a;border-color:#34422e;color:var(--muted)}
-.quick-chip-btns button:hover{color:var(--lime);border-color:var(--lime)}
-
-.settle-card{background:#11150f;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:6px}
-.history-item{transition:border-color .2s}
-.history-item:hover{border-color:var(--lime)}
-.stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px}
-.stat-row:last-child{border-bottom:0}
-
-/* RANK BADGES FOR LEADERBOARD */
-.lb-rank{font-size:12px;font-weight:800;min-width:38px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#11150f;border:1px solid var(--line);color:var(--muted);flex-shrink:0}
-.lb-rank.rank-1{background:#312900;border-color:var(--gold);color:var(--gold)}
-.lb-rank.rank-2{background:#22262b;border-color:var(--silver);color:var(--silver)}
-.lb-rank.rank-3{background:#2a1c12;border-color:var(--bronze);color:var(--bronze)}
-
-#addModal .label{font-size:11px;margin:10px 0 4px}
-#addModal textarea#newName{font-size:15px;padding:10px}
-#addModal .modal-subtext{font-size:12px;color:var(--muted);margin-top:4px}
-
-.legend-box-row{background:#11150f;border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-top:6px;display:flex;gap:10px;align-items:center;overflow-x:auto;font-size:10px;color:var(--muted);white-space:nowrap}
-.legend-box-row::-webkit-scrollbar{display:none}
-.lb-single-row{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%}
-.lb-metrics-inline{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text);white-space:nowrap;margin:0 4px}
-.lb-metrics-inline span{background:#11150f;border:1px solid var(--line);padding:2px 5px;border-radius:5px;font-weight:700}
-
-/* PRESET CHIPS */
-.preset-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
-.chip-btn{background:#11150f;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .15s;min-height:34px}
-.chip-btn:hover{border-color:var(--lime);color:var(--lime)}
-.chip-btn.selected{background:var(--lime);color:#10130c;border-color:var(--lime)}
-.chip-btn .freq-tag{font-size:9px;background:#20261d;color:var(--muted);padding:2px 5px;border-radius:999px}
-.chip-btn.selected .freq-tag{background:#10130c;color:var(--lime)}
-</style>
-
-<!-- FIREBASE COMPAT SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-</head>
-<body>
-<div class="app">
-<div class="top">
-  <div class="logo">POT<b>LUCK</b> 🃏</div>
-  <div class="pill">BUILD 18 · FIREBASE READY</div>
-</div>
-
-<!-- AUTH STATUS BAR -->
-<div class="auth-bar">
-  <div class="user-badge">
-    <span id="userEmailText">Checking Auth...</span>
-    <span id="userRoleBadge" class="role-pill role-visitor">VISITOR</span>
-  </div>
-  <div>
-    <button id="authBtn" class="btn-sm primary" onclick="toggleAuthModal()">Login</button>
-  </div>
-</div>
-
-<!-- NAVIGATION TABS -->
-<div class="tabs" id="tabContainer">
-  <button class="tab-btn primary admin-only" onclick="switchTab('create', this)">➕ Create Game</button>
-  <button class="tab-btn" onclick="switchTab('quick', this)">⚡ Quick View</button>
-  <button class="tab-btn admin-only" id="ledgerTabBtn" style="display:none" onclick="switchTab('ledger', this)">₹ Ledger & Logs</button>
-  <button class="tab-btn" onclick="switchTab('calc', this)">🧮 Calculator</button>
-  <button class="tab-btn" onclick="switchTab('leaderboard', this)">🏆 Leaderboard</button>
-  <button class="tab-btn" onclick="switchTab('overall', this)">📊 Overall Stats</button>
-  <button class="tab-btn" id="historyTabBtn" onclick="switchTab('history', this)">📜 History</button>
-  <button class="tab-btn superadmin-only" id="usersTabBtn" style="display:none" onclick="switchTab('users', this)">⚙️ Users</button>
-</div>
-
-<!-- 1. CREATE GAME TAB -->
-<section id="create" class="tab-section active admin-only">
-  <div class="card">
-    <div class="eyebrow">NEW SESSION</div>
-    <h2>Setup New Poker Game</h2>
-    <div class="grid">
-      <div><label class="label">Date</label><input id="gameDate" type="date"></div>
-      <div><label class="label">Game Title</label><input id="gameTitle" value="Mohans Poker Club"></div>
-    </div>
-    <div class="grid">
-      <div><label class="label">Buy-in Cash (₹)</label><input id="cash" type="number" value="1000"></div>
-      <div><label class="label">Chips per Buy-in</label><input id="chips" type="number" value="4000"></div>
-    </div>
-    <label class="label">Blinds</label>
-    <div class="two">
-      <input id="small" type="number" value="50" placeholder="Small Blind">
-      <input id="big" type="number" value="100" placeholder="Big Blind">
-    </div>
-    <div class="actions">
-      <button class="primary" onclick="startNewGame()" id="startBtn">Start Game Session</button>
-    </div>
-  </div>
-</section>
-
-<!-- 2. QUICK VIEW TAB -->
-<section id="quick" class="tab-section">
-  <div class="card">
-    <div class="eyebrow" id="quickGameEyebrow">ACTIVE SESSION</div>
-    <div class="game-heading" id="quickGameTitle">No Active Game</div>
-    <div class="sub" id="quickGameMeta">Create a game session to start adding players</div>
-    
-    <div class="actions admin-only" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line)">
-      <button class="primary" onclick="openAddModal()" id="addPlayerBtn" disabled>+ Add Players</button>
-      <button class="accent" onclick="openSettleModal()" id="endSettleBtn" disabled>🏁 End & Settle</button>
-    </div>
-  </div>
-  <div id="quickPlayerList"></div>
-</section>
-
-<!-- 3. LEDGER & LOGS TAB -->
-<section id="ledger" class="tab-section admin-only">
-  <div class="card">
-    <div class="eyebrow">ACTIVE GAME TOTALS</div>
-    <h2>Financial Overview</h2>
-    <div class="stats">
-      <div class="stat"><small>Cash In</small><strong id="cashIn">₹0</strong></div>
-      <div class="stat"><small>Chips Issued</small><strong id="chipsIn">0</strong></div>
-      <div class="stat"><small>Active Players</small><strong id="activePlayerCount">0</strong></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="eyebrow">ADMIN ACTION LOGS</div>
-    <h2>Game Event Trail</h2>
-    <div id="ledgerList"></div>
-  </div>
-</section>
-
-<!-- 4. CALCULATOR TAB -->
-<section id="calc" class="tab-section">
-  <div class="card">
-    <div class="eyebrow">POT CALCULATOR</div>
-    <h2>Side Pot Splitter</h2>
-    <div class="sub">Enter individual player bets for an all-in hand to split main & side pots</div>
-    <div id="sidePotInputs" style="margin-top:10px">
-      <div class="two" style="margin-bottom:6px">
-        <input type="number" class="sp-input" placeholder="Player 1 Bet (Chips)">
-        <input type="number" class="sp-input" placeholder="Player 2 Bet (Chips)">
-      </div>
-      <div class="two" style="margin-bottom:6px">
-        <input type="number" class="sp-input" placeholder="Player 3 Bet (Chips)">
-        <input type="number" class="sp-input" placeholder="Player 4 Bet (Chips)">
-      </div>
-    </div>
-    <div class="actions">
-      <button class="primary" onclick="calculateSidePots()">Calculate Pots</button>
-      <button onclick="addSidePotInput()">+ Add Player Field</button>
-    </div>
-    <div id="sidePotResult" style="margin-top:10px"></div>
-  </div>
-
-  <div class="card">
-    <div class="eyebrow">CHIP CONVERTER</div>
-    <h2>Chips ↔ Cash Converter</h2>
-    <div class="sub">Quickly convert chip stacks to cash value or vice-versa</div>
-    <div class="two" style="margin-top:10px">
-      <div>
-        <label class="label">Rate: Cash per Buy-in (₹)</label>
-        <input id="calcRateCash" type="number" value="1000" oninput="runChipConvert()">
-      </div>
-      <div>
-        <label class="label">Rate: Chips per Buy-in</label>
-        <input id="calcRateChips" type="number" value="4000" oninput="runChipConvert()">
-      </div>
-    </div>
-    <div class="two" style="margin-top:8px">
-      <div>
-        <label class="label">Chips Count</label>
-        <input id="calcChipsInput" type="number" placeholder="e.g. 6000" oninput="runChipConvert('chips')">
-      </div>
-      <div>
-        <label class="label">Cash Equivalent (₹)</label>
-        <input id="calcCashInput" type="number" placeholder="e.g. 1500" oninput="runChipConvert('cash')">
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 5. LEADERBOARD TAB -->
-<section id="leaderboard" class="tab-section">
-  <div class="card">
-    <div class="eyebrow">ALL-TIME RANKINGS</div>
-    <h2>Player Leaderboard</h2>
-    <div class="sub">Career performance across recorded game sessions</div>
-    
-    <div class="legend-box-row">
-      <span style="font-weight:800;color:var(--lime);margin-right:2px">LEGEND:</span>
-      <span>📅 Days</span>
-      <span>📈 Profit</span>
-      <span>📉 Loss</span>
-      <span>🤝 Break Even</span>
-    </div>
-  </div>
-  <div id="leaderboardList"></div>
-</section>
-
-<!-- 6. OVERALL STATS TAB -->
-<section id="overall" class="tab-section">
-  <div class="card">
-    <div class="eyebrow">HISTORICAL COMBINED METRICS</div>
-    <h2>Overall Poker Statistics</h2>
-    <div class="sub">Aggregated data across all recorded past sessions</div>
-    <div class="stats-4">
-      <div class="stat"><small>Poker Days</small><strong id="statPokerDays">0</strong></div>
-      <div class="stat"><small>Unique Players</small><strong id="statUniquePlayers">0</strong></div>
-      <div class="stat"><small>Total Buy-ins</small><strong id="statTotalBuyins">0</strong></div>
-      <div class="stat"><small>Value of Buy-ins</small><strong id="statValueBuyins">₹0</strong></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="eyebrow">MONEY FLOW</div>
-    <h2>Financial Summary</h2>
-    <div class="stats-4">
-      <div class="stat"><small>Total Profit</small><strong id="statTotalProfit" class="pos">₹0</strong></div>
-      <div class="stat"><small>Total Loss</small><strong id="statTotalLoss" class="neg">₹0</strong></div>
-      <div class="stat"><small>Break-Even Value</small><strong id="statBreakEvenVal">₹0</strong></div>
-      <div class="stat"><small>Chips Issued</small><strong id="statChipsIssued">0</strong></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="eyebrow">RECORDS & TRIVIA</div>
-    <h2>Fun Statistics</h2>
-    <div id="funStatsList"></div>
-  </div>
-</section>
-
-<!-- 7. HISTORY TAB -->
-<section id="history" class="tab-section">
-  <div class="card">
-    <div class="eyebrow">PAST SESSIONS</div>
-    <h2>Game History</h2>
-    <div class="sub">View summaries, copy settlement text, edit past games, or delete sessions</div>
-  </div>
-  <div id="historyList"></div>
-</section>
-
-<!-- 8. USER MANAGEMENT TAB (SUPER ADMIN ONLY) -->
-<section id="users" class="tab-section superadmin-only">
-  <div class="card">
-    <div class="eyebrow">SUPER ADMIN CONTROL</div>
-    <h2>Manage User Access</h2>
-    <div class="sub">Promote or demote users to control scoring & game management permissions</div>
-  </div>
-  <div id="usersList"></div>
-</section>
-
-</div>
-
-<!-- AUTH MODAL -->
-<!-- AUTH MODAL -->
-<div id="authModal" class="modal">
-  <div class="sheet">
-    <div class="row">
-      <h2 id="authModalTitle">Login</h2>
-      <button onclick="closeModal('authModal')">✕</button>
-    </div>
-    <div style="margin-top:10px">
-      <label class="label">Email Address</label>
-      <input type="email" id="authEmail" placeholder="admin@potluck.com">
-      <label class="label">Password</label>
-      <input type="password" id="authPassword" placeholder="••••••••">
-      
-      <!-- REMEMBER ME & FORGOT PASSWORD ROW -->
-      <div class="row" style="margin-top:10px;font-size:12px;color:var(--muted)">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-          <input type="checkbox" id="authRemember" style="width:auto;min-height:auto" checked> Remember Me
-        </label>
-        <a href="#" onclick="handleForgotPassword(event)" style="color:var(--lime);text-decoration:none;font-weight:700">Forgot Password?</a>
-      </div>
-
-      <div class="actions" style="margin-top:12px">
-        <button class="primary" style="width:100%" onclick="handleLogin()">Log In</button>
-        <button style="width:100%" onclick="handleSignUp()">Sign Up New Account</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ADD PLAYER MODAL -->
-<div id="addModal" class="modal">
-  <div class="sheet">
-    <div class="row"><h2>Add Players</h2><button onclick="closeModal('addModal')">✕</button></div>
-    
-    <label class="label">Select Pre-Defined Players (Frequency Sorted)</label>
-    <div id="presetChipsContainer" class="preset-chips"></div>
-
-    <label class="label">Or Enter Custom Names (comma separated)</label>
-    <textarea id="newName" placeholder="e.g. Arjun, Rahul"></textarea>
-    <div class="modal-subtext">Each added player starts with 1 buy-in by default.</div>
-    <div class="actions"><button class="primary" onclick="confirmAddPlayer()">Add Selected Players</button></div>
-  </div>
-</div>
-
-<!-- END GAME & SETTLEMENT MODAL -->
-<div id="settleModal" class="modal">
-  <div class="sheet">
-    <div class="row">
-      <h2>End Game & Settlement</h2>
-      <button onclick="closeModal('settleModal')">✕</button>
-    </div>
-    <div class="sub" style="margin-bottom:10px">Enter final chip stack counts. Press <b>Enter</b> to move to the next field.</div>
-    
-    <div id="settleInputs"></div>
-
-    <div id="settleAudit" class="card" style="margin-top:10px;background:#11150f">
-      <div class="row">
-        <div>
-          <div class="sub">Total Issued: <b id="totalChipsIssued">0</b></div>
-          <div class="sub">Total Counted: <b id="totalChipsCounted">0</b></div>
-        </div>
-        <div id="chipBalanceStatus"></div>
-      </div>
-    </div>
-
-    <div class="actions">
-      <button class="primary" style="width:100%" onclick="finalizeAndArchiveGame()">Finalize & Save to History</button>
-    </div>
-  </div>
-</div>
-
-<!-- HISTORY DETAIL MODAL -->
-<div id="historyModal" class="modal">
-  <div class="sheet">
-    <div class="row">
-      <h2 id="histModalTitle">Game Details</h2>
-      <button onclick="closeModal('historyModal')">✕</button>
-    </div>
-    <div class="sub" id="histModalMeta" style="margin-bottom:10px"></div>
-    <div id="histModalContent"></div>
-  </div>
-</div>
-
-<!-- EDIT PAST GAME MODAL -->
-<div id="editModal" class="modal">
-  <div class="sheet">
-    <div class="row">
-      <h2>Edit Past Game Results</h2>
-      <button onclick="closeModal('editModal')">✕</button>
-    </div>
-    <div class="sub" style="margin-bottom:10px">Adjust final chip stack counts. Press <b>Enter</b> to move to the next field.</div>
-    
-    <div id="editInputs"></div>
-
-    <div class="actions">
-      <button class="primary" style="width:100%" onclick="saveEditedGame()">Save Corrections</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast" class="toast"></div>
-
-<script>
 // --- FIREBASE INITIALIZATION ---
-  const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyCfxxUrfWws1872Suk9_0G5t2jehflZy7k",
   authDomain: "potluckpoker-d7633.firebaseapp.com",
   projectId: "potluckpoker-d7633",
@@ -523,16 +79,17 @@ function initRealtimeListeners() {
       document.getElementById('ledgerTabBtn').style.display = 'none';
     }
     renderAll();
-  }):
-    // Listen for Hidden Players Configuration
-db.collection('poker_config').doc('hidden_players').onSnapshot(doc => {
-  if (doc.exists && doc.data().names) {
-    hiddenPlayerNames = new Set(doc.data().names);
-  } else {
-    hiddenPlayerNames.clear();
-  }
-  renderAll();
-});
+  }); // <--- Fixed typo colon to closing bracket/semicolon
+
+  // Listen for Hidden Players Configuration
+  db.collection('poker_config').doc('hidden_players').onSnapshot(doc => {
+    if (doc.exists && doc.data().names) {
+      hiddenPlayerNames = new Set(doc.data().names);
+    } else {
+      hiddenPlayerNames.clear();
+    }
+    renderAll();
+  });
 
   // Listen for History Games
   db.collection('poker_history').orderBy('id', 'desc').onSnapshot(snapshot => {
@@ -560,17 +117,20 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById('userEmailText').textContent = user.email;
     document.getElementById('authBtn').textContent = 'Logout';
     
-    // Fetch or create user role document
-    const userRef = db.collection('users').doc(user.uid);
-    const doc = await userRef.get();
-    
-    if (doc.exists) {
-      userRole = doc.data().role || 'VISITOR';
-    } else {
-      // First user becomes Super Admin automatically, others become Visitors
-      const snapshot = await db.collection('users').get();
-      userRole = snapshot.empty ? 'SUPER_ADMIN' : 'VISITOR';
-      await userRef.set({ email: user.email, role: userRole });
+    try {
+      const userRef = db.collection('users').doc(user.uid);
+      const doc = await userRef.get();
+      
+      if (doc.exists) {
+        userRole = doc.data().role || 'VISITOR';
+      } else {
+        const snapshot = await db.collection('users').get();
+        userRole = snapshot.empty ? 'SUPER_ADMIN' : 'VISITOR';
+        await userRef.set({ email: user.email, role: userRole });
+      }
+    } catch (e) {
+      console.error("Auth error:", e);
+      userRole = 'VISITOR';
     }
   } else {
     currentUser = null;
@@ -591,7 +151,6 @@ function updateRoleUI() {
     userRole === 'ADMIN' ? 'role-admin' : 'role-visitor'
   );
 
-  // Show/Hide Admin Action UI
   const isAdmin = (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN');
   const isSuperAdmin = (userRole === 'SUPER_ADMIN');
 
@@ -625,7 +184,6 @@ async function handleLogin() {
   if (!email || !pass) return toast('Please enter email and password');
 
   try {
-    // LOCAL keeps session saved across browser restarts; SESSION clears on tab close
     const persistence = remember 
       ? firebase.auth.Auth.Persistence.LOCAL 
       : firebase.auth.Auth.Persistence.SESSION;
@@ -639,7 +197,7 @@ async function handleLogin() {
   }
 }
 
-  async function handleForgotPassword(event) {
+async function handleForgotPassword(event) {
   if (event) event.preventDefault();
   const email = document.getElementById('authEmail').value.trim();
 
@@ -653,7 +211,7 @@ async function handleLogin() {
   } catch (err) {
     toast(err.message);
   }
-  }
+}
 
 async function handleSignUp() {
   const email = document.getElementById('authEmail').value.trim();
@@ -702,7 +260,6 @@ async function togglePlayerVisibility(playerName) {
 function renderUsersList() {
   const container = document.getElementById('usersList');
   
-  // Build unique clean player list from history
   const allKnownPlayers = new Set();
   PRESET_PLAYERS.forEach(p => allKnownPlayers.add(normalizePlayerName(p)));
   historyGames.forEach(g => g.players.forEach(p => allKnownPlayers.add(normalizePlayerName(p))));
@@ -747,7 +304,6 @@ function renderUsersList() {
 
   container.innerHTML = html;
 }
-
 
 // --- SYNC HELPERS ---
 async function syncActiveGame() {
@@ -870,6 +426,7 @@ function renderQuickView() {
   const isAdmin = (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN');
 
   container.innerHTML = activeGame.players.map(p => {
+    let displayName = normalizePlayerName(p.name);
     let pl = calculateNetPL(p);
     let plFormatted = (pl >= 0 ? '+' : '-') + '₹' + Math.abs(Math.round(pl)).toLocaleString('en-IN');
     let plClass = pl >= 0 ? 'pos' : 'neg';
@@ -879,9 +436,9 @@ function renderQuickView() {
         <div class="card removed-row">
           <div class="row">
             <div class="who">
-              <div class="avatar">${p.name.slice(0,2).toUpperCase()}</div>
+              <div class="avatar">${displayName.slice(0,2).toUpperCase()}</div>
               <div>
-                <b>${p.name}</b> <span class="tag">REMOVED</span>
+                <b>${displayName}</b> <span class="tag">REMOVED</span>
                 <div class="sub">Buy-ins: ${p.buyins} · ${p.chips.toLocaleString('en-IN')} chips</div>
               </div>
             </div>
@@ -896,9 +453,9 @@ function renderQuickView() {
       <div class="card ${isSittingOut ? 'sitting-out' : ''}">
         <div class="row">
           <div class="who">
-            <div class="avatar">${p.name.slice(0,2).toUpperCase()}</div>
+            <div class="avatar">${displayName.slice(0,2).toUpperCase()}</div>
             <div>
-              <b>${p.name}</b> ${isSittingOut ? '<span class="tag tag-out">SITTING OUT</span>' : ''}
+              <b>${displayName}</b> ${isSittingOut ? '<span class="tag tag-out">SITTING OUT</span>' : ''}
               <div class="sub">Buy-ins: <span class="count">${p.buyins}</span> · ${p.chips.toLocaleString('en-IN')} chips</div>
             </div>
           </div>
@@ -925,9 +482,9 @@ async function rebuy(id) {
   p.cash += activeGame.cash;
   p.chips += activeGame.chips;
   p.buyins++;
-  logEvent(activeGame, 'Rebuy', `${p.name} added 1 Rebuy (+₹${activeGame.cash}, +${activeGame.chips} chips)`);
+  logEvent(activeGame, 'Rebuy', `${normalizePlayerName(p.name)} added 1 Rebuy (+₹${activeGame.cash}, +${activeGame.chips} chips)`);
   await syncActiveGame();
-  toast(p.name + ' rebuy added ✓');
+  toast(normalizePlayerName(p.name) + ' rebuy added ✓');
 }
 
 async function undoBuyIn(id) {
@@ -937,9 +494,9 @@ async function undoBuyIn(id) {
   p.cash -= activeGame.cash;
   p.chips -= activeGame.chips;
   p.buyins--;
-  logEvent(activeGame, 'Undo Buy-in', `Undone 1 Buy-in for ${p.name} (-₹${activeGame.cash}, -${activeGame.chips} chips)`);
+  logEvent(activeGame, 'Undo Buy-in', `Undone 1 Buy-in for ${normalizePlayerName(p.name)} (-₹${activeGame.cash}, -${activeGame.chips} chips)`);
   await syncActiveGame();
-  toast('Buy-in undone for ' + p.name);
+  toast('Buy-in undone for ' + normalizePlayerName(p.name));
 }
 
 async function toggleSitOut(id) {
@@ -947,9 +504,9 @@ async function toggleSitOut(id) {
   let p = activeGame.players.find(x => x.id === id);
   if(!p || !p.active) return;
   p.sittingOut = !p.sittingOut;
-  logEvent(activeGame, p.sittingOut ? 'Player Sit Out' : 'Player Resumed', `${p.name} is now ${p.sittingOut ? 'sitting out' : 'active'}`);
+  logEvent(activeGame, p.sittingOut ? 'Player Sit Out' : 'Player Resumed', `${normalizePlayerName(p.name)} is now ${p.sittingOut ? 'sitting out' : 'active'}`);
   await syncActiveGame();
-  toast(p.name + (p.sittingOut ? ' is sitting out' : ' resumed play'));
+  toast(normalizePlayerName(p.name) + (p.sittingOut ? ' is sitting out' : ' resumed play'));
 }
 
 async function togglePlayer(id) {
@@ -957,9 +514,9 @@ async function togglePlayer(id) {
   let p = activeGame.players.find(x => x.id === id);
   if(!p) return;
   p.active = !p.active;
-  logEvent(activeGame, p.active ? 'Player Restored' : 'Player Removed', `${p.name} was ${p.active ? 'restored to' : 'removed from'} active game`);
+  logEvent(activeGame, p.active ? 'Player Restored' : 'Player Removed', `${normalizePlayerName(p.name)} was ${p.active ? 'restored to' : 'removed from'} active game`);
   await syncActiveGame();
-  toast(p.name + (p.active ? ' restored' : ' removed'));
+  toast(normalizePlayerName(p.name) + (p.active ? ' restored' : ' removed'));
 }
 
 function openAddModal() {
@@ -977,13 +534,14 @@ function renderPresetChips() {
 
   historyGames.forEach(g => {
     g.players.forEach(p => {
-      if(p.active && freqMap[p.name] !== undefined) {
-        freqMap[p.name]++;
+      if(p.active) {
+        let clean = normalizePlayerName(p.name);
+        if(freqMap[clean] !== undefined) freqMap[clean]++;
       }
     });
   });
 
-  let activeNames = new Set(activeGame ? activeGame.players.filter(p => p.active).map(p => p.name) : []);
+  let activeNames = new Set(activeGame ? activeGame.players.filter(p => p.active).map(p => normalizePlayerName(p.name)) : []);
   let sortedPresets = [...PRESET_PLAYERS].sort((a,b) => freqMap[b] - freqMap[a]);
 
   let html = sortedPresets.map(name => {
@@ -1020,7 +578,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('show'); 
 async function confirmAddPlayer() {
   if (userRole === 'VISITOR') return;
   let rawNames = document.getElementById('newName').value;
-  let customNames = rawNames.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  let customNames = rawNames.split(',').map(s => normalizePlayerName(s)).filter(s => s.length > 0);
   
   customNames.forEach(name => {
     let exists = PRESET_PLAYERS.some(p => p.toLowerCase() === name.toLowerCase());
@@ -1041,7 +599,6 @@ async function confirmAddPlayer() {
   toast(`${allToAdd.length} player(s) added!`);
 }
 
-/* ENTER KEY FOCUS NAVIGATION FOR SETTLEMENTS */
 function handleSettlementKeydown(event, currentIndex, containerClass) {
   if (event.key === 'Enter') {
     event.preventDefault();
@@ -1060,7 +617,6 @@ function handleSettlementKeydown(event, currentIndex, containerClass) {
   }
 }
 
-/* SETTLEMENT WITH QUICK CHIP BUTTONS & ENTER KEY NAV */
 function openSettleModal() {
   if (userRole === 'VISITOR') return;
   if(!activeGame || activeGame.players.length === 0) return toast('No players to settle!');
@@ -1069,7 +625,7 @@ function openSettleModal() {
   let inputsHtml = activeList.map((p, idx) => `
     <div class="settle-card-wrap">
       <div class="settle-row">
-        <div><b>${p.name}</b> <span class="sub">(Paid ₹${p.cash})</span></div>
+        <div><b>${normalizePlayerName(p.name)}</b> <span class="sub">(Paid ₹${p.cash})</span></div>
         <input type="number" class="settle-input" id="settleInp_${p.id}" data-id="${p.id}" value="" placeholder="0" oninput="updateSettleAudit()" onkeydown="handleSettlementKeydown(event, ${idx}, 'settle-input')">
       </div>
       <div class="quick-chip-btns">
@@ -1157,7 +713,7 @@ async function finalizeAndArchiveGame() {
       let finalCash = (finalChips / activeGame.chips) * activeGame.cash;
       let netPL = Math.round(finalCash - player.cash);
       player.finalPL = netPL;
-      balances.push({ id: player.id, name: player.name, net: netPL });
+      balances.push({ id: player.id, name: normalizePlayerName(player.name), net: netPL });
     }
   });
 
@@ -1185,7 +741,7 @@ function openEditModal(gid) {
   let inputsHtml = g.players.filter(p => p.active).map((p, idx) => `
     <div class="settle-card-wrap">
       <div class="settle-row">
-        <div><b>${p.name}</b> <span class="sub">(Paid ₹${p.cash})</span></div>
+        <div><b>${normalizePlayerName(p.name)}</b> <span class="sub">(Paid ₹${p.cash})</span></div>
         <input type="number" class="edit-input" id="editInp_${p.id}" data-id="${p.id}" value="${p.finalChips || 0}" onkeydown="handleSettlementKeydown(event, ${idx}, 'edit-input')">
       </div>
       <div class="quick-chip-btns">
@@ -1222,7 +778,7 @@ async function saveEditedGame() {
       let finalCash = (finalChips / g.chips) * g.cash;
       let netPL = Math.round(finalCash - player.cash);
       player.finalPL = netPL;
-      balances.push({ id: player.id, name: player.name, net: netPL });
+      balances.push({ id: player.id, name: normalizePlayerName(player.name), net: netPL });
     }
   });
 
@@ -1235,7 +791,6 @@ async function saveEditedGame() {
   openHistoryDetail(g.id);
 }
 
-/* DELETE PAST GAME (ADMIN RIGHT) */
 async function deleteHistoryGame(gid) {
   if (userRole === 'VISITOR') return;
   let g = historyGames.find(x => x.id === gid);
@@ -1248,7 +803,6 @@ async function deleteHistoryGame(gid) {
   }
 }
 
-/* COPY SETTLEMENT SUMMARY TO CLIPBOARD */
 function generateShareText(g) {
   let text = `🃏 *POTLUCK POKER SUMMARY*\n`;
   text += `📌 *${g.title}*\n`;
@@ -1257,7 +811,7 @@ function generateShareText(g) {
   text += `*Settlements / Transfers:*\n`;
   if(g.settlements && g.settlements.length > 0) {
     g.settlements.forEach(s => {
-      text += `• *${s.from}* pays *${s.to}* → ₹${s.amount.toLocaleString('en-IN')}\n`;
+      text += `• *${normalizePlayerName(s.from)}* pays *${normalizePlayerName(s.to)}* → ₹${s.amount.toLocaleString('en-IN')}\n`;
     });
   } else {
     text += `• No payment transfers required.\n`;
@@ -1278,7 +832,6 @@ function generateShareText(g) {
   return text;
 }
 
-
 function copyGameSummaryText(gid) {
   let g = historyGames.find(x => x.id === gid);
   if(!g) return;
@@ -1290,7 +843,6 @@ function copyGameSummaryText(gid) {
   });
 }
 
-/* SIDE POT CALCULATOR & CONVERTER LOGIC */
 function addSidePotInput() {
   let container = document.getElementById('sidePotInputs');
   let count = container.querySelectorAll('input').length + 1;
@@ -1361,18 +913,14 @@ function runChipConvert(source) {
   }
 }
 
-/* LEADERBOARD WITH DEDUPLICATION & VISIBILITY FILTER */
 function renderLeaderboard() {
   leaderboardData = {};
 
   historyGames.forEach(g => {
     g.players.forEach(p => {
       if (!p.active) return;
-      
-      // 1. Normalize spelling typos
       const cleanName = normalizePlayerName(p.name);
       
-      // 2. Hide players if marked hidden (unless logged in as Super Admin)
       if (hiddenPlayerNames.has(cleanName) && userRole !== 'SUPER_ADMIN') {
         return;
       }
@@ -1460,23 +1008,24 @@ function renderOverallStats() {
     let gamePot = 0;
     g.players.forEach(p => {
       if(!p.active) return;
-      uniquePlayers.add(normalizePlayerName(p.name));
+      let cleanName = normalizePlayerName(p.name);
+      uniquePlayers.add(cleanName);
       totalBuyins += p.buyins;
       let cashSpent = p.cash;
       totalBuyinVal += cashSpent;
       gamePot += cashSpent;
       totalChipsIssued += (p.buyins * g.chips);
 
-      playerDaysMap[p.name] = (playerDaysMap[p.name] || 0) + 1;
+      playerDaysMap[cleanName] = (playerDaysMap[cleanName] || 0) + 1;
 
       let pl = p.finalPL || 0;
       if(pl > 0) {
         totalProfit += pl;
-        if(pl > maxWin.amount) maxWin = { amount: pl, player: p.name, game: g.title };
+        if(pl > maxWin.amount) maxWin = { amount: pl, player: cleanName, game: g.title };
       } else if(pl < 0) {
         let absLoss = Math.abs(pl);
         totalLoss += absLoss;
-        if(absLoss > maxLoss.amount) maxLoss = { amount: absLoss, player: p.name, game: g.title };
+        if(absLoss > maxLoss.amount) maxLoss = { amount: absLoss, player: cleanName, game: g.title };
       } else {
         breakEvenVal += cashSpent;
       }
@@ -1572,6 +1121,7 @@ function openHistoryDetail(gid) {
   document.getElementById('histModalMeta').textContent = `${g.date} · Blinds ₹${g.small}/₹${g.big} · Buy-in ₹${g.cash}`;
 
   let playersHtml = g.players.map(p => {
+    let displayName = normalizePlayerName(p.name);
     let pl = p.finalPL || 0;
     let plFormatted = (pl >= 0 ? '+' : '-') + '₹' + Math.abs(pl).toLocaleString('en-IN');
     let plClass = pl >= 0 ? 'pos' : 'neg';
@@ -1580,7 +1130,7 @@ function openHistoryDetail(gid) {
       <div class="card" style="background:#11150f;margin-bottom:6px;padding:8px 10px">
         <div class="row">
           <div>
-            <b>${p.name}</b>
+            <b>${displayName}</b>
             <div class="sub">Buy-ins: ${p.buyins} · Final Chips: ${p.finalChips || 0}</div>
           </div>
           <b class="${plClass}">${plFormatted}</b>
@@ -1600,7 +1150,7 @@ function openHistoryDetail(gid) {
     ${g.settlements.map(s => `
       <div class="settle-card">
         <div class="row">
-          <div><b>${s.from}</b> pays <b>${s.to}</b></div>
+          <div><b>${normalizePlayerName(s.from)}</b> pays <b>${normalizePlayerName(s.to)}</b></div>
           <b class="count">₹${s.amount.toLocaleString('en-IN')}</b>
         </div>
       </div>
@@ -1660,5 +1210,3 @@ function renderAll() {
 
 renderAll();
 </script>
-</body>
-</html>
